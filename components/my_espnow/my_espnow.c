@@ -149,14 +149,39 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint8_t *recv_dev_type)
     return 1;
 }
 
+
+/* Prepare ESPNOW data to be sent. */
+void espnow_data_prepare(send_param_t *send_param)
+{
+    espnow_data_t *buf = (espnow_data_t *)send_param->buffer;
+
+    assert(send_param->buf_len >= sizeof(espnow_data_t));
+
+    buf->dev_type = send_param->dev_type;
+    buf->payload_len = send_param->data_len;
+    buf->crc = 0;
+    memcpy(buf->payload, send_param->data_to_send, send_param->data_len);
+    buf->crc = esp_crc16_le(UINT16_MAX, (uint8_t const *)buf, send_param->buf_len);
+
+    //todo na zkalade typu by mohlo switchovat jak velka je payload len
+}
+
+
 void get_message(uint8_t *data, void ** message){
     espnow_data_t *buf = (espnow_data_t *)data;
     memcpy(*message, buf->payload, buf->payload_len);
+    //todo  free?
 }
 
 
 
-
+static void my_espnow_deinit(send_param_t *send_param)
+{
+    free(send_param->buffer);
+    free(send_param);
+    //todo vSemaphoreDelete(s_espnow_queue);
+    esp_now_deinit();
+}
 
 
 
@@ -172,13 +197,20 @@ void espnow_bridge_task(void *pvParameter)
 
     //ESP_LOGI(TAG, "Start sending broadcast data");
 
-    // /* Start sending broadcast ESPNOW data. */
-    // example_espnow_send_param_t *send_param = (example_espnow_send_param_t *)pvParameter;
-    // if (esp_now_send(send_param->dest_mac, send_param->buffer, send_param->len) != ESP_OK) {
-    //     ESP_LOGE(TAG, "Send error");
-    //     example_espnow_deinit(send_param);
-    //     vTaskDelete(NULL);
-    // }
+
+
+
+   
+    /* Start sending broadcast ESPNOW data. */
+    ESP_LOGI(TAG, "1");
+    send_param_t *send_param = (send_param_t *)pvParameter;
+    if (esp_now_send(send_param->dest_mac, send_param->buffer, send_param->buf_len) != ESP_OK) {
+        ESP_LOGI(TAG, "2");
+        ESP_LOGE(TAG, "Send error");
+        my_espnow_deinit(send_param);
+        vTaskDelete(NULL);
+    }
+    ESP_LOGI(TAG, "3");
 
 
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -186,10 +218,11 @@ void espnow_bridge_task(void *pvParameter)
         switch (evt.id) {
             case EXAMPLE_ESPNOW_SEND_CB:
             {
+                ESP_LOGI(TAG, "4");
                 espnow_event_send_cb_t *send_cb = &evt.info.send_cb;
                 is_broadcast = IS_BROADCAST_ADDR(send_cb->mac_addr);
 
-                ESP_LOGD(TAG, "Send data to "MACSTR", status1: %d", MAC2STR(send_cb->mac_addr), send_cb->status);
+                ESP_LOGI(TAG, "Send data to "MACSTR", status1: %d", MAC2STR(send_cb->mac_addr), send_cb->status);
 
                 if (!is_broadcast) {
                     ESP_LOGI(TAG, "recieved non broadcast address");
@@ -247,18 +280,19 @@ void espnow_bridge_task(void *pvParameter)
 
                     case SWITCH:{
                         switch_data_t switch_data = {
-                            .ON = false,
-                            .watter_flow = 0,
-                            .watter_level = 0,
+                            
+                            .flow = 33,
+                            .pressure = 33,
+                            .switch_status = false,
                         };
                         switch_data_t* switch_data_p = &switch_data;
                         get_message(recv_cb->data, (void*)&switch_data_p);
                         free(recv_cb->data);
 
                         ESP_LOGI(TAG, "     Data from SWITCH");
-                        ESP_LOGI(TAG, "     SWITCHED: %s", switch_data.ON ? "ON" : "OFF");
-                        ESP_LOGI(TAG, "     WATTER FLOW: %d dm^3", switch_data.watter_flow);
-                        ESP_LOGI(TAG, "     WATTER LEVEL: %d cm", switch_data.watter_level);
+                        ESP_LOGI(TAG, "     SWITCHED: %s", switch_data.switch_status ? "ON" : "OFF");
+                        ESP_LOGI(TAG, "     WATTER FLOW: %d dm^3", switch_data.flow);
+                        ESP_LOGI(TAG, "     WATTER PRESSURE: %d Pa", switch_data.pressure);
                         ESP_LOGI(TAG, "");
                         break;
                     }

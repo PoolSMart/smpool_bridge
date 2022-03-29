@@ -97,9 +97,19 @@ void app_main(void)
         esp_now_deinit();
         return ;
     }
-    send_param->data_to_send = &data;
-    send_param->data_len = sizeof(switch_data_t );
+
+//todo remove
+    u_int8_t param = 1;
+    send_param->data_to_send = &param;
+    send_param->dev_type = SWITCH;
+    send_param->data_len = sizeof(u_int8_t );
     memcpy(send_param->dest_mac, s_example_broadcast_mac, ESP_NOW_ETH_ALEN);
+    espnow_data_prepare(send_param);
+
+
+    // send_param->data_to_send = &data;
+    // send_param->data_len = sizeof(switch_data_t );
+    // memcpy(send_param->dest_mac, s_example_broadcast_mac, ESP_NOW_ETH_ALEN);
     
     xTaskCreate(&espnow_bridge_task, "bridge task", 2048, send_param, 4, NULL);
     while(1){

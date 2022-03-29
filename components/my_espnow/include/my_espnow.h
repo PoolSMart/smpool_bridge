@@ -35,11 +35,11 @@ typedef enum {
   SWITCH
 } smpool_device_type;
 
-//data to be send to switch
+//data to be send to bridge
 typedef struct {
-    uint8_t ON;                         //If recieved from bridge it means directive turn on. If recieved from switch it means thath switch is turned on.
-    u_int16_t watter_flow;              //Watter flow in dm^3 (litres).
-    u_int16_t watter_level;             //Vertical distance from watter level sensor  to watter surface. In cm.
+    u_int32_t pressure;                 //Measured pressure value (Pa).
+    u_int16_t flow;                     //Measured float value of (dm^3).
+    u_int8_t switch_status;             //Boolean which represents if switch is ON/OFF.
 } switch_data_t;
 
 //data from luxmeter
@@ -82,6 +82,7 @@ esp_err_t sendData(lux_data_t * data);
 void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status);
 void example_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len);
 void espnow_bridge_task(void *pvParameter);
+void espnow_data_prepare(send_param_t *send_param);
 
 
 xQueueHandle s_example_espnow_queue;
