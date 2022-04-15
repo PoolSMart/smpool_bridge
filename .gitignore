@@ -2,7 +2,8 @@ components/arduino
 build
 err
 .vscode
-sdkconfig
+sdkconfig*
+
 
 # Prerequisites
 *.d
