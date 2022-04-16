@@ -161,7 +161,7 @@ int espnow_data_parse(uint8_t *data, uint16_t data_len, uint8_t *recv_dev_type)
 }
 
 
-void mySend(send_param_t* send_param_p){
+void my_send(send_param_t* send_param_p){
     if(send_semaphore != NULL){
       if(xSemaphoreTake(send_semaphore, portMAX_DELAY) == pdTRUE){
         espnow_data_prepare(send_param_p);
@@ -176,10 +176,10 @@ void mySend(send_param_t* send_param_p){
     }
 }
 
-void mySendTask(void* pv_send_param){
+void my_send_task(void* pv_send_param){
     send_param_t* send_param_p = (send_param_t*) pv_send_param;
     vTaskDelay(pdMS_TO_TICKS(3000));
-    mySend(send_param_p);
+    my_send(send_param_p);
     vTaskDelete(NULL);
 }
 

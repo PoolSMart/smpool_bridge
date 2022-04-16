@@ -44,7 +44,7 @@ typedef enum {
 //data to be send to bridge
 typedef struct {
     u_int32_t pressure;                 //Measured pressure value (Pa).
-    u_int16_t flow;                     //Measured float value of (dm^3).
+    u_int16_t flow;                     //Measured float value of (dm^3 / 3600s).
     u_int8_t switch_status;             //Boolean which represents if switch is ON/OFF.
 } switch_data_t;
 
@@ -61,6 +61,8 @@ typedef struct {
     u_int8_t bat_percentage;            //Percentage of remaining battery capacity.
 } therm_data_t;
 
+//data to be recieved from bridge
+typedef u_int8_t switch_request_t;        //Boolean which represents if switch should be ON. ON-true, OFF-false.
 
 //Parameters of sending ESPNOW data.
 typedef struct {
@@ -90,7 +92,7 @@ void espnow_data_prepare(send_param_t *send_param);
 void get_message(uint8_t *data, void ** message);
 esp_err_t myEspNowSetup(send_param_t** send_param, int data_len, smpool_device_type dev_type);
 void myBridgeEspNowTask(void* send_param_pv);
-void mySend(send_param_t* send_param_p);
+void my_send(send_param_t* send_param_p);
 void my_espnow_deinit(send_param_t *send_param);
 
 

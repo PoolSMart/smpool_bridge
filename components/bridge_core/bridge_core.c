@@ -26,7 +26,10 @@
 
 
 
-
+typedef enum{
+  OFF,
+  ON
+} switch_state_t;
 
 
 
@@ -47,27 +50,6 @@ esp_mqtt_client_handle_t mqtt_client;
 
 
 
-
-
-// //
-// // Note: this function is for testing purposes only publishing part of the active partition
-// //       (to be checked against the original binary)
-// //
-// static void send_binary(esp_mqtt_client_handle_t client)
-// {
-//     spi_flash_mmap_handle_t out_handle;
-//     const void *binary_address;
-//     //const esp_partition_t *partition = esp_ota_get_running_partition();
-//     esp_partition_mmap(partition, 0, partition->size, SPI_FLASH_MMAP_DATA, &binary_address, &out_handle);
-//     // sending only the configured portion of the partition (if it's less than the partition size)
-//     int binary_size = MIN(CONFIG_BROKER_BIN_SIZE_TO_SEND,partition->size);
-//     int msg_id = esp_mqtt_client_publish(client, "my/test/topic", binary_address, binary_size, 0, 0);
-//     ESP_LOGI(TAG, "binary sent with msg_id=%d", msg_id);
-// }
-
-
-
-
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
@@ -78,10 +60,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, "SMpool/pool/switch/comands", 2);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-        msg_id =  esp_mqtt_client_publish(client, "SMpool/pool/switch/status", "TEST2", 0, 2, 0);
-        msg_id =  esp_mqtt_client_publish(client, "SMpool/pool/switch/status", "TEST3", 0, 0, 0);
-        msg_id =  esp_mqtt_client_publish(client, "SMpool/pool", "TEST4", 0, 0, 0);
+        ESP_LOGI(TAG, "Sent subscribe successful, msg_id=%d.", msg_id);
         break;
 
     case MQTT_EVENT_DISCONNECTED:
@@ -110,7 +89,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGI(TAG, "Sending the binary");
             //send_binary(client);
         }
+        if(strncmp(event->topic, "SMpool/pool/switch/comands", event->topic_len) == 0){
+            switch_request_t command;
+            if(strncmp(event->data, "ON_", event->data_len) == 0){
+                command = ON;
+            }
+            else{
+                command = OFF;
+            }
+            send_param_p->dev_type = SWITCH;      
+            send_param_p->data_to_send = (uint8_t*) &command;
+            send_param_p->data_len = sizeof(switch_request_t);
+            my_send(send_param_p);
+        }
         break;
+
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
         if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
@@ -131,11 +124,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 }
 
 
-
-
-   
-
-
 void mqtt_app_start(void)
 {
     const esp_mqtt_client_config_t mqtt_cfg = {
@@ -149,8 +137,6 @@ void mqtt_app_start(void)
     esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(mqtt_client);
 }
-
-
 
 
 void myBridgeEspNowTask(void* send_param_pv){
@@ -204,9 +190,16 @@ void myBridgeEspNowTask(void* send_param_pv){
                         ESP_LOGI(TAG, "     BAT: %u",lux_data.bat_percentage);
                         ESP_LOGI(TAG, "");
 
-                        char* msg  =  (char*)malloc(sizeof("Luxmeter lux:")  +  sizeof("123"));
-                        sprintf(msg, "Luxmeter lux: %s","123");
-                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/lux", msg, 0, 2, 0);
+                        char* msg = (char*)malloc( sizeof("000"));
+                        sprintf(msg, "%03d",lux_data.bat_percentage);
+                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/bat", msg, 0, 2, 0);
+                        free(msg);
+
+                        u_int32_t lux = lux_data.lux;
+                        msg = (char*)malloc( sizeof("000000"));
+                        sprintf(msg, "%06d",lux);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/lux", msg, 0, 2, 0);
+                        free(msg);
 
                         break;
                     }
@@ -227,6 +220,20 @@ void myBridgeEspNowTask(void* send_param_pv){
                         ESP_LOGI(TAG, "     PH: %f", therm_data.ph);
                         ESP_LOGI(TAG, "     BAT: %u", therm_data.bat_percentage);
                         ESP_LOGI(TAG, "");
+
+                        char* msg = (char*)malloc( sizeof("000"));
+                        sprintf(msg, "%03d",therm_data.bat_percentage);
+                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/bat", msg, 0, 2, 0);
+                        free(msg);
+
+                        msg = (char*)malloc( sizeof("+00.0"));
+                        sprintf(msg, "%+05.1f",therm_data.ph);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/ph", msg, 0, 2, 0);
+
+                        sprintf(msg, "%+05.1f",therm_data.temperature);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/temperature", msg, 0, 2, 0);
+                        free(msg);
+
                         break;
                     }
                         
@@ -242,14 +249,26 @@ void myBridgeEspNowTask(void* send_param_pv){
                         free(recv_cb->data);
 
                         ESP_LOGI(TAG, "     Data from SWITCH");
-                        ESP_LOGI(TAG, "     SWITCHED: %s", switch_data.switch_status ? "ON " : "OFF");
+                        ESP_LOGI(TAG, "     SWITCHED: %s", switch_data.switch_status ? "ON_" : "OFF");
                         ESP_LOGI(TAG, "     WATTER FLOW: %d dm^3", switch_data.flow);
                         ESP_LOGI(TAG, "     WATTER PRESSURE: %d Pa", switch_data.pressure);
                         ESP_LOGI(TAG, "");
 
-                        char* msg  =  (char*)malloc(sizeof("Switch status:")  +  sizeof("ON "));
-                        sprintf(msg, "Switch status: %s",switch_data.switch_status ? "ON " : "OFF");
+                        char* msg  =  (char*)malloc(sizeof("ON_"));
+                        sprintf(msg, "%s",switch_data.switch_status ? "ON_" : "OFF");
                         int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/status", msg, 0, 2, 0);
+                        free(msg);
+
+                        msg = (char*)malloc( sizeof("000000"));
+                        sprintf(msg, "%06d",switch_data.pressure);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/pressure", msg, 0, 2, 0);
+                        free(msg);
+
+                        msg = (char*)malloc( sizeof("00000"));
+                        sprintf(msg, "%05d",switch_data.flow);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/flow", msg, 0, 2, 0);
+                        free(msg);
+
                         break;
                     }
 
@@ -271,7 +290,7 @@ void myBridgeEspNowTask(void* send_param_pv){
                             break;
                         }
                         memcpy(touch_send_param->dest_mac, broadcast_mac_s, ESP_NOW_ETH_ALEN);
-                        mySend(touch_send_param);
+                            my_send(touch_send_param);
                         ESP_LOGI(TAG, "TOUCH");
                         break;
                     }
@@ -291,21 +310,6 @@ void myBridgeEspNowTask(void* send_param_pv){
     }
     vTaskDelete(NULL);
 }
-
-
-
-
-// void cb_connection_ok(void *pvParameter){
-//     ESP_LOGI("WiFi MANAGER", "CONECTED. #################");
-//     //mqtt_app_start();
-//     myEspNowSetup(&send_param_p, sizeof(switch_data_t), BRIDGE);
-    
-//     vTaskDelay(pdMS_TO_TICKS(1000));
-//     xTaskCreate(&myBridgeEspNowTask, "MyEspNowTask", 4096, send_param_p, 9, NULL);
-// }
-
-
-
 
 void bridge_core(){
     mqtt_app_start();
