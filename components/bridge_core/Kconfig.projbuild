@@ -2,7 +2,7 @@ menu "MQTT"
 
     config BROKER_URI
         string "Broker URL"
-        default "mqtts://Smpool:Smpoolpass1@f32a355886424b0b9bea85ddd69e2007.s1.eu.hivemq.cloud:8883"
+        default "mqtts://Smpool:Smpoolpass1@c563ae28a30a49718b670a75ea24b07b.s1.eu.hivemq.cloud:8883"
         help
             URL of an mqtt broker which this example connects to.
 

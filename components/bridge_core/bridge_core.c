@@ -192,13 +192,13 @@ void myBridgeEspNowTask(void* send_param_pv){
 
                         char* msg = (char*)malloc( sizeof("000"));
                         sprintf(msg, "%03d",lux_data.bat_percentage);
-                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/bat", msg, 0, 2, 0);
+                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/bat", msg, 0, 0, 0);
                         free(msg);
 
                         u_int32_t lux = lux_data.lux;
                         msg = (char*)malloc( sizeof("000000"));
                         sprintf(msg, "%06d",lux);
-                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/lux", msg, 0, 2, 0);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/luxmeter/lux", msg, 0, 0, 0);
                         free(msg);
 
                         break;
@@ -223,15 +223,15 @@ void myBridgeEspNowTask(void* send_param_pv){
 
                         char* msg = (char*)malloc( sizeof("000"));
                         sprintf(msg, "%03d",therm_data.bat_percentage);
-                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/bat", msg, 0, 2, 0);
+                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/bat", msg, 0, 0, 0);
                         free(msg);
 
                         msg = (char*)malloc( sizeof("+00.0"));
                         sprintf(msg, "%+05.1f",therm_data.ph);
-                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/ph", msg, 0, 2, 0);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/ph", msg, 0, 0, 0);
 
                         sprintf(msg, "%+05.1f",therm_data.temperature);
-                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/temperature", msg, 0, 2, 0);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/thermometer/temperature", msg, 0, 0, 0);
                         free(msg);
 
                         break;
@@ -256,17 +256,17 @@ void myBridgeEspNowTask(void* send_param_pv){
 
                         char* msg  =  (char*)malloc(sizeof("ON_"));
                         sprintf(msg, "%s",switch_data.switch_status ? "ON_" : "OFF");
-                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/status", msg, 0, 2, 0);
+                        int msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/status", msg, 0, 0, 0);
                         free(msg);
 
                         msg = (char*)malloc( sizeof("000000"));
                         sprintf(msg, "%06d",switch_data.pressure);
-                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/pressure", msg, 0, 2, 0);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/pressure", msg, 0, 0, 0);
                         free(msg);
 
                         msg = (char*)malloc( sizeof("00000"));
                         sprintf(msg, "%05d",switch_data.flow);
-                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/flow", msg, 0, 2, 0);
+                        msg_id =  esp_mqtt_client_publish(mqtt_client, "SMpool/pool/switch/flow", msg, 0, 0, 0);
                         free(msg);
 
                         break;
