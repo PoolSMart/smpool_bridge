@@ -1,12 +1,16 @@
-
+/************************************************************
+ *                                                          *
+ *      Firmware for bridge unit in SMPool system           *
+ *                                                          *
+ *      File:       main.c                                  *
+ *      Author:     Marek Stastny                           *
+ *      Created:    2022                                    *
+ *                                                          *
+ ************************************************************/
 
 
 #include "my_espnow.h"
 #include "my_mqtt.h"
-
-
-
-
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -14,9 +18,6 @@
 #include "nvs.h"
 #include "mqtt_client.h"
 #include "esp_wifi.h"
-
-
-
 
 #include "esp_log.h"
 #include "mqtt_client.h"
@@ -32,14 +33,15 @@ typedef enum{
 } switch_state_t;
 
 
-
-
 static const char *TAG = "ESPNOW";
 uint8_t broadcast_mac_s[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 send_param_t* send_param_p;
 
 extern xQueueHandle s_espnow_queue;
 
+
+
+//This section is based on the code from this example: https://github.com/espressif/esp-idf/tree/master/examples/protocols/mqtt/ssl
 #if CONFIG_BROKER_CERTIFICATE_OVERRIDDEN == 1
 static const uint8_t mqtt_eclipseprojects_io_pem_start[]  = "-----BEGIN CERTIFICATE-----\n" CONFIG_BROKER_CERTIFICATE_OVERRIDE "\n-----END CERTIFICATE-----";
 #else
@@ -122,6 +124,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     }
 }
+//End of the section based on this example: https://github.com/espressif/esp-idf/tree/master/examples/protocols/mqtt/ssl
 
 
 void mqtt_app_start(void)
@@ -313,11 +316,6 @@ void myBridgeEspNowTask(void* send_param_pv){
 
 void bridge_core(){
     mqtt_app_start();
-    
     myEspNowSetup(&send_param_p, sizeof(switch_data_t), BRIDGE);
     xTaskCreate(&myBridgeEspNowTask, "MyEspNowTask", 4096, send_param_p, 9, NULL);
-    while(true){
-        ESP_LOGI("","end loop");
-        vTaskDelay(pdMS_TO_TICKS(5000));
-    }
 }

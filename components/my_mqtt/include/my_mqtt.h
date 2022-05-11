@@ -8,8 +8,6 @@ extern "C" {
 #endif
 
 
-
-
 void mqtt_app_start(void);
 
 
